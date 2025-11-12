@@ -50,6 +50,7 @@
 
       <!-- Player lineup section -->
       <div id="feedback"></div>
+      <div id="guess-counter">Guessed correctly: 0 / 12</div>
       <form id="guess-form" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input id="guess" type="text" placeholder="Enter player or manager surname" autocomplete="off" />
         <button type="submit">Submit</button>
@@ -59,6 +60,62 @@
       <button id="reveal-btn">Reveal All</button>
     </div>
   </div>
+
+<div id="celebration-modal" style="
+    display:none;
+    position:fixed;
+    top:0; left:0; right:0; bottom:0;
+    background:rgba(0,0,0,0.7);
+    justify-content:center;
+    align-items:center;
+    z-index:9999;
+">
+  <div style="
+      background:#0b1220;
+      padding:24px;
+      border-radius:12px;
+      text-align:center;
+      position:relative;
+  ">
+    <span id="close-modal" style="
+        position:absolute;
+        top:8px; right:12px;
+        cursor:pointer;
+        font-size:20px;
+        color:white;
+    ">&times;</span>
+    <h2 style="color:blue">Nice one!</h2>
+    <img src="images/ally.gif" alt="Celebration" style="max-width:100%; border-radius:12px;" />
+  </div>
+</div>
+
+<div id="reveal-modal" style="
+    display:none;
+    position:fixed;
+    top:0; left:0; right:0; bottom:0;
+    background:rgba(0,0,0,0.7);
+    justify-content:center;
+    align-items:center;
+    z-index:9999;
+">
+  <div style="
+      background:#0b1220;
+      padding:24px;
+      border-radius:12px;
+      text-align:center;
+      position:relative;
+  ">
+    <span id="close-reveal-modal" style="
+        position:absolute;
+        top:8px; right:12px;
+        cursor:pointer;
+        font-size:20px;
+        color:white;
+    ">&times;</span>
+    <h2 style="color:blue">Walter doesn't like quitters</h2>
+    <img src="images/walter.gif" alt="Celebration" style="max-width:100%; border-radius:12px;" />
+  </div>
+</div>
 
 <script>
   function normalizeName(name){
@@ -70,23 +127,24 @@
   // Full matches with lineup + scorers
   const matches = [
     {
-      name: 'Rangers 5–1 Celtic, 2002–03 SPL',
+      name: 'Rangers 5–1 Celtic, 26 November 2000, SPL',
       players: [
-        {name:'Alex McLeish', surname:'McLeish', position:'Manager', img:placeholderImg},
-        {name:'Stefan Klos', surname:'Klos', position:'Goalkeeper', img:placeholderImg},
-        {name:'Sasa Papac', surname:'Papac', position:'Defender', img:placeholderImg},
-        {name:'Maurice Ross', surname:'Ross', position:'Defender', img:placeholderImg},
-        {name:'Fernando Ricksen', surname:'Ricksen', position:'Defender', img:placeholderImg},
-        {name:'Barry Ferguson', surname:'Ferguson', position:'Midfielder', img:placeholderImg},
-        {name:'Bert Konterman', surname:'Konterman', position:'Midfielder', img:placeholderImg},
-        {name:'Dado Prso', surname:'Prso', position:'Attacker', img:placeholderImg},
-        {name:'Peter Lovenkrands', surname:'Lovenkrands', position:'Attacker', img:placeholderImg},
-        {name:'Nacho Novo', surname:'Novo', position:'Attacker', img:placeholderImg},
-        {name:'Rod Wallace', surname:'Wallace', position:'Attacker', img:placeholderImg}
+        {name:'Alex McLeish', surname:'McLeish', position:'Manager', img:"images/mcleish.jpg"},
+        {name:'Stefan Klos', surname:'Klos', position:'Goalkeeper', img:"images/klos.jpg"},
+        {name:'Lorenzo Amoruso', surname:'Amoruso', position:'Defender', img:"images/amoruso.jpg"},
+        {name:'Arthur Numan', surname:'Numan', position:'Defender', img:"images/numan.jpg"},
+        {name:'Scott Wilson', surname:'Wilson', position:'Defender', img:"images/wilson.jpg"},
+        {name:'Barry Ferguson', surname:'Ferguson', position:'Midfielder', img:"images/ferguson.jpg"},
+        {name:'Jorg Albertz', surname:'Albertz', position:'Midfielder', img:"images/albertz.jpg"},
+        {name:'Bert Konterman', surname:'Konterman', position:'Midfielder', img:"images/konterman.jpg"},
+        {name:'Claudio Reyna', surname:'Reyna', position:'Midfielder', img:"images/reyna.jpg"},
+        {name:'Kenny Miller', surname:'Miller', position:'Attacker', img:"images/miller.jpg"},        
+        {name:'Tore Andre Flo', surname:'Flo', position:'Attacker', img:"images/flo.jpg"},
+        {name:'Ronald de Boer', surname:'de Boer', position:'Attacker', img:"images/deboer.jpg"}
       ],
-      scorers: ['Prso','Ferguson','Novo','Lovenkrands','Wallace']
+      scorers: ['Ferguson','Flo','De Boer','Amoruso','Mols']
     },
-    {
+/*     {
       name: 'Rangers 3–2 Celtic, 2010–11 SPL',
       players: [
         {name:'Walter Smith', surname:'Smith', position:'Manager', img:placeholderImg},
@@ -138,9 +196,9 @@
         {name:'Barrie McKay', surname:'McKay', position:'Attacker', img:placeholderImg}
       ],
       scorers: ['Morelos']
-    },
+    }, */
     {
-      name: 'Rangers 3–1 RB Leipzig, 2021–22 Europa League Semi-Final 2nd Leg',
+      name: 'Rangers 3–1 RB Leipzig, 5 May 2022, Europa League Semi-Final 2nd Leg',
       players: [
         {name:'Allan McGregor', surname:'McGregor', position:'Goalkeeper', img:'images/mcgregor.jpg'},
         {name:'James Tavernier', surname:'Tavernier', position:'Defender', img:'images/tavernier.jpg'},
@@ -181,6 +239,7 @@
     document.getElementById('match-meta').textContent = match.name;
     renderResults();
     renderScorers();
+    updateCounter();
     document.getElementById('feedback').textContent = '';
     document.getElementById('scorer-feedback').textContent = '';
   }
@@ -214,6 +273,23 @@
     else listEl.textContent = 'Guessed scorers: ' + Array.from(guessedScorers).map(s=>s).join(', ');
   }
 
+  function updateCounter(fromReveal) {
+    const total = participants.length; // total players + manager
+    const correct = guessed.size;
+    document.getElementById('guess-counter').textContent = `Guessed correctly: ${correct} / ${total}`;
+
+    // Show modal when all guessed
+    if(correct === total){
+      if (fromReveal) {
+        const modal = document.getElementById('reveal-modal');
+        modal.style.display = 'flex'; // show modal
+      } else {
+        const modal = document.getElementById('celebration-modal');
+        modal.style.display = 'flex'; // show modal
+      }
+    }
+  }
+
   document.getElementById('guess-form').addEventListener('submit',e=>{
     e.preventDefault();
     const val = normalizeName(document.getElementById('guess').value.trim()).toLowerCase();
@@ -228,6 +304,7 @@
       document.getElementById('feedback').style.color='red';
     }
     renderResults();
+    updateCounter();
     document.getElementById('guess').value='';
     setTimeout(()=>document.getElementById('feedback').textContent='',2000);
   });
@@ -254,9 +331,32 @@
     scorers.forEach(s=>guessedScorers.add(s));
     renderResults();
     renderScorers();
+    updateCounter(true);
   });
 
   matchSelect.addEventListener('change',()=>{ loadMatch(matchSelect.value); });
+
+  document.getElementById('close-modal').addEventListener('click', ()=>{
+    document.getElementById('celebration-modal').style.display = 'none';
+  });
+
+  // Optional: close if clicking outside the modal content
+  document.getElementById('celebration-modal').addEventListener('click', e=>{
+    if(e.target === e.currentTarget){
+      e.currentTarget.style.display = 'none';
+    }
+});
+
+  document.getElementById('close-reveal-modal').addEventListener('click', ()=>{
+    document.getElementById('reveal-modal').style.display = 'none';
+  });
+
+  // Optional: close if clicking outside the modal content
+  document.getElementById('reveal-modal').addEventListener('click', e=>{
+    if(e.target === e.currentTarget){
+      e.currentTarget.style.display = 'none';
+    }
+});
 
   // Load first match by default
   loadMatch(0);
