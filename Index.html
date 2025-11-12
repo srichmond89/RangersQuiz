@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Rangers — Starting XI & Scorers Quiz</title>
+  <style>
+    :root{--bg:#0b1220;--card:#0f1b2a;--accent:#d52b1e;--muted:#9fb0c8}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#071021 0%,#0b1730 100%);color:#e6f0fb;margin:0;padding:32px;display:flex;justify-content:center}
+    .wrap{width:760px;max-width:96%;}
+    header{margin-bottom:18px}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+    .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 6px 20px rgba(2,6,23,0.6);}
+    input{padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:#111b2c;color:#e6f0fb;flex:1;}
+    select{padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:#111b2c;color:#e6f0c;margin-bottom:12px;width:100%;}
+    button{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 10px;border-radius:8px;color:#e6f0fb;cursor:pointer;}
+    ul{list-style:none;padding-left:0}
+    li{margin-bottom:8px;display:flex;align-items:center;gap:12px}
+    li img{width:120px;height:120px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.2)}
+    .position{font-weight:bold;color:var(--accent);margin-top:12px}
+    .results{margin-top:14px;padding:10px;border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,0.05),transparent);min-height:120px}
+    footer{margin-top:14px;color:var(--muted);font-size:13px;text-align:center}
+    #reveal-btn{margin-top:12px;width:100%;}
+    #feedback,#scorer-feedback{font-weight:bold;margin-bottom:8px;font-size:16px;height:20px;}
+    .meta{color:var(--muted);font-size:13px;margin-bottom:8px}
+    .scorer-list{margin-top:8px;color:#9fb0c8;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Guess the Starting XI & Scorers — Rangers</h1>
+      <p class="lead">Select a historic match to play the quiz</p>
+    </header>
+
+    <div class="card">
+      <select id="match-select"></select>
+      <div class="meta" id="match-meta"></div>
+
+      <!-- Scorers section -->
+      <div>
+        <div id="scorer-feedback"></div>
+        <form id="scorer-form" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+          <input id="scorer-guess" type="text" placeholder="Enter scorer surname" autocomplete="off" />
+          <button type="submit">Submit</button>
+        </form>
+        <div class="scorer-list" id="scorer-list">Guessed scorers: ?</div>
+      </div>
+
+      <!-- Player lineup section -->
+      <div id="feedback"></div>
+      <form id="guess-form" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="guess" type="text" placeholder="Enter player or manager surname" autocomplete="off" />
+        <button type="submit">Submit</button>
+      </form>
+
+      <div class="results" id="results">(lineup will appear here)</div>
+      <button id="reveal-btn">Reveal All</button>
+    </div>
+  </div>
+
+<script>
+  function normalizeName(name){
+    return name.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+  }
+
+  const placeholderImg = 'images/placeholder.jpg';
+
+  // Full matches with lineup + scorers
+  const matches = [
+    {
+      name: 'Rangers 5–1 Celtic, 2002–03 SPL',
+      players: [
+        {name:'Alex McLeish', surname:'McLeish', position:'Manager', img:placeholderImg},
+        {name:'Stefan Klos', surname:'Klos', position:'Goalkeeper', img:placeholderImg},
+        {name:'Sasa Papac', surname:'Papac', position:'Defender', img:placeholderImg},
+        {name:'Maurice Ross', surname:'Ross', position:'Defender', img:placeholderImg},
+        {name:'Fernando Ricksen', surname:'Ricksen', position:'Defender', img:placeholderImg},
+        {name:'Barry Ferguson', surname:'Ferguson', position:'Midfielder', img:placeholderImg},
+        {name:'Bert Konterman', surname:'Konterman', position:'Midfielder', img:placeholderImg},
+        {name:'Dado Prso', surname:'Prso', position:'Attacker', img:placeholderImg},
+        {name:'Peter Lovenkrands', surname:'Lovenkrands', position:'Attacker', img:placeholderImg},
+        {name:'Nacho Novo', surname:'Novo', position:'Attacker', img:placeholderImg},
+        {name:'Rod Wallace', surname:'Wallace', position:'Attacker', img:placeholderImg}
+      ],
+      scorers: ['Prso','Ferguson','Novo','Lovenkrands','Wallace']
+    },
+    {
+      name: 'Rangers 3–2 Celtic, 2010–11 SPL',
+      players: [
+        {name:'Walter Smith', surname:'Smith', position:'Manager', img:placeholderImg},
+        {name:'Allan McGregor', surname:'McGregor', position:'Goalkeeper', img:placeholderImg},
+        {name:'Steven Whittaker', surname:'Whittaker', position:'Defender', img:placeholderImg},
+        {name:'Madjid Bougherra', surname:'Bougherra', position:'Defender', img:placeholderImg},
+        {name:'Carlos Bocanegra', surname:'Bocanegra', position:'Defender', img:placeholderImg},
+        {name:'Emilio Izaguirre', surname:'Izaguirre', position:'Defender', img:placeholderImg},
+        {name:'Steven Davis', surname:'Davis', position:'Midfielder', img:placeholderImg},
+        {name:'Barry Ferguson', surname:'Ferguson', position:'Midfielder', img:placeholderImg},
+        {name:'Kris Boyd', surname:'Boyd', position:'Attacker', img:placeholderImg},
+        {name:'Nikica Jelavic', surname:'Jelavic', position:'Attacker', img:placeholderImg},
+        {name:'John Fleck', surname:'Fleck', position:'Midfielder', img:placeholderImg},
+        {name:'Chris Burke', surname:'Burke', position:'Attacker', img:placeholderImg}
+      ],
+      scorers: ['Jelavic','Boyd','Davis']
+    },
+    {
+      name: 'Rangers 3–2 Hearts, 2005 Scottish Cup Final',
+      players: [
+        {name:'Alex McLeish', surname:'McLeish', position:'Manager', img:placeholderImg},
+        {name:'Stefan Klos', surname:'Klos', position:'Goalkeeper', img:placeholderImg},
+        {name:'Sasa Papac', surname:'Papac', position:'Defender', img:placeholderImg},
+        {name:'Fernando Ricksen', surname:'Ricksen', position:'Defender', img:placeholderImg},
+        {name:'Maurice Ross', surname:'Ross', position:'Defender', img:placeholderImg},
+        {name:'Barry Ferguson', surname:'Ferguson', position:'Midfielder', img:placeholderImg},
+        {name:'Bert Konterman', surname:'Konterman', position:'Midfielder', img:placeholderImg},
+        {name:'Dado Prso', surname:'Prso', position:'Attacker', img:placeholderImg},
+        {name:'Nacho Novo', surname:'Novo', position:'Attacker', img:placeholderImg},
+        {name:'Peter Lovenkrands', surname:'Lovenkrands', position:'Attacker', img:placeholderImg},
+        {name:'Rod Wallace', surname:'Wallace', position:'Attacker', img:placeholderImg}
+      ],
+      scorers: ['Prso','Ferguson','Novo']
+    },
+    {
+      name: 'Rangers 1–0 Aberdeen, 2016–17 Scottish Cup Final',
+      players: [
+        {name:'Mark Warburton', surname:'Warburton', position:'Manager', img:placeholderImg},
+        {name:'Allan McGregor', surname:'McGregor', position:'Goalkeeper', img:placeholderImg},
+        {name:'Lee Wallace', surname:'Wallace', position:'Defender', img:placeholderImg},
+        {name:'James Tavernier', surname:'Tavernier', position:'Defender', img:placeholderImg},
+        {name:'Rob Kiernan', surname:'Kiernan', position:'Defender', img:placeholderImg},
+        {name:'Andy Halliday', surname:'Halliday', position:'Midfielder', img:placeholderImg},
+        {name:'Josh Windass', surname:'Windass', position:'Midfielder', img:placeholderImg},
+        {name:'Jason Holt', surname:'Holt', position:'Midfielder', img:placeholderImg},
+        {name:'Alfredo Morelos', surname:'Morelos', position:'Attacker', img:placeholderImg},
+        {name:'Ricky Foster', surname:'Foster', position:'Midfielder', img:placeholderImg},
+        {name:'James Garner', surname:'Garner', position:'Attacker', img:placeholderImg},
+        {name:'Barrie McKay', surname:'McKay', position:'Attacker', img:placeholderImg}
+      ],
+      scorers: ['Morelos']
+    },
+    {
+      name: 'Rangers 3–1 RB Leipzig, 2021–22 Europa League Semi-Final 2nd Leg',
+      players: [
+        {name:'Allan McGregor', surname:'McGregor', position:'Goalkeeper', img:'images/mcgregor.jpg'},
+        {name:'James Tavernier', surname:'Tavernier', position:'Defender', img:'images/tavernier.jpg'},
+        {name:'Connor Goldson', surname:'Goldson', position:'Defender', img:'images/goldson.jpg'},
+        {name:'Calvin Bassey', surname:'Bassey', position:'Defender', img:'images/bassey.jpg'},
+        {name:'Borna Barisic', surname:'Barisic', position:'Defender', img:'images/barisic.jpg'},
+        {name:'Ryan Jack', surname:'Jack', position:'Midfielder', img:'images/jack.jpg'},
+        {name:'John Lundstram', surname:'Lundstram', position:'Midfielder', img:'images/lundstram.jpg'},
+        {name:'Glen Kamara', surname:'Kamara', position:'Midfielder', img:'images/kamara.jpg'},
+        {name:'Scott Wright', surname:'Wright', position:'Attacker', img:'images/wright.jpg'},
+        {name:'Joe Aribo', surname:'Aribo', position:'Attacker', img:'images/aribo.jpg'},
+        {name:'Ryan Kent', surname:'Kent', position:'Attacker', img:'images/kent.jpg'},
+        {name:'Giovanni van Bronckhorst', surname:'van Bronckhorst', position:'Manager', img:'images/vanbronckhorst.jpg'}
+      ],
+      scorers: ['Tavernier','Kamara','Lundstram']
+    }
+  ];
+
+  const matchSelect = document.getElementById('match-select');
+  matches.forEach((m,i)=>{
+    const opt = document.createElement('option');
+    opt.value=i;
+    opt.textContent=m.name;
+    matchSelect.appendChild(opt);
+  });
+
+  let participants = [];
+  let guessed = new Set();
+  let scorers = [];
+  let guessedScorers = new Set();
+
+  function loadMatch(index){
+    const match = matches[index];
+    participants = match.players.map(p=>({...p, surname:normalizeName(p.surname)}));
+    guessed = new Set();
+    scorers = match.scorers.map(s=>normalizeName(s));
+    guessedScorers = new Set();
+    document.getElementById('match-meta').textContent = match.name;
+    renderResults();
+    renderScorers();
+    document.getElementById('feedback').textContent = '';
+    document.getElementById('scorer-feedback').textContent = '';
+  }
+
+  function renderResults(){
+    const resultsEl = document.getElementById('results');
+    resultsEl.innerHTML='';
+    const positions = ['Manager','Goalkeeper','Defender','Midfielder','Attacker'];
+    positions.forEach(pos=>{
+      const ul = document.createElement('ul');
+      const title = document.createElement('li');
+      title.textContent = pos+':' ;
+      title.className='position';
+      ul.appendChild(title);
+      participants.filter(p=>p.position===pos).forEach(p=>{
+        const li = document.createElement('li');
+        const img = document.createElement('img');
+        img.src = guessed.has(p.surname)?p.img:placeholderImg;
+        const span = document.createElement('span');
+        span.textContent = guessed.has(p.surname)?p.name:'?';
+        li.append(img,span);
+        ul.appendChild(li);
+      });
+      resultsEl.appendChild(ul);
+    });
+  }
+
+  function renderScorers(){
+    const listEl = document.getElementById('scorer-list');
+    if(guessedScorers.size===0) listEl.textContent = 'Guessed scorers: ?';
+    else listEl.textContent = 'Guessed scorers: ' + Array.from(guessedScorers).map(s=>s).join(', ');
+  }
+
+  document.getElementById('guess-form').addEventListener('submit',e=>{
+    e.preventDefault();
+    const val = normalizeName(document.getElementById('guess').value.trim()).toLowerCase();
+    if(!val) return;
+    const found = participants.find(p=>normalizeName(p.surname).toLowerCase()===val);
+    if(found && !guessed.has(val)){
+      guessed.add(val);
+      document.getElementById('feedback').textContent='Correct';
+      document.getElementById('feedback').style.color='limegreen';
+    } else {
+      document.getElementById('feedback').textContent='Incorrect';
+      document.getElementById('feedback').style.color='red';
+    }
+    renderResults();
+    document.getElementById('guess').value='';
+    setTimeout(()=>document.getElementById('feedback').textContent='',2000);
+  });
+
+  document.getElementById('scorer-form').addEventListener('submit',e=>{
+    e.preventDefault();
+    const val = normalizeName(document.getElementById('scorer-guess').value.trim()).toLowerCase();
+    if(!val) return;
+    if(scorers.includes(val) && !guessedScorers.has(val)){
+      guessedScorers.add(val);
+      document.getElementById('scorer-feedback').textContent='Correct';
+      document.getElementById('scorer-feedback').style.color='limegreen';
+    } else {
+      document.getElementById('scorer-feedback').textContent='Incorrect';
+      document.getElementById('scorer-feedback').style.color='red';
+    }
+    renderScorers();
+    document.getElementById('scorer-guess').value='';
+    setTimeout(()=>document.getElementById('scorer-feedback').textContent='',2000);
+  });
+
+  document.getElementById('reveal-btn').addEventListener('click',()=>{
+    participants.forEach(p=>guessed.add(p.surname));
+    scorers.forEach(s=>guessedScorers.add(s));
+    renderResults();
+    renderScorers();
+  });
+
+  matchSelect.addEventListener('change',()=>{ loadMatch(matchSelect.value); });
+
+  // Load first match by default
+  loadMatch(0);
+</script>
+</body>
+</html>
